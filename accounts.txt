@@ -1,0 +1,3 @@
+# Contoh
+otpauth://totp/Google%3Ayour-email?secret=YOUR_SECRET_KEY&issuer=Google
+otpauth://totp/GitHub:your-username?secret=ANOTHER_SECRET_KEY&issuer=GitHub
