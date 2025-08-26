@@ -12,6 +12,7 @@ import sys
 import pyperclip
 from urllib.parse import urlparse, parse_qs, unquote
 import pyotp
+import pyfiglet
 
 UPDATE_SECONDS = 5
 
@@ -42,7 +43,7 @@ def parseOtpUrl(uri):
 
     return pyotp.TOTP(secret), f"{issuer}: {account}"
 
-def load_accounts(filename="accounts.txt"):
+def loadAccounts(filename="accounts.txt"):
     accounts = []
     try:
         with open(filename, 'r') as f:
@@ -63,18 +64,28 @@ def load_accounts(filename="accounts.txt"):
     
     return accounts
 
-def clear_terminal():
+def clearTerminal():
     if platform.system() == "Windows":
         os.system('cls')
     else:
         os.system('clear')
+    """
+    Membersihkan seluruh output di terminal.
+    # Kode ANSI untuk membersihkan layar dari kursor ke bawah
+    print("\033[2J\033[H", end="", flush=True)
+    """
+
+def banner():
+    print(f"{pyfiglet.figlet_format('PyAte', font='slant')}")
+    print("Python Authenticator Token Extractor")
+    print("https://github.com/FebraS/PyAte")
+    print("---------------------------------")
 
 def main():
-    clear_terminal()
-    print("PyAte - Python Authenticator Token Extractor")
-    print("------------------------")
+    clearTerminal()
+    banner()
 
-    accounts = load_accounts()
+    accounts = loadAccounts()
     
     if not accounts:
         print("No accounts loaded. Make sure 'accounts.txt' exists and is not empty.")
@@ -93,18 +104,19 @@ def main():
             otpChanged = any(currentOtps.get(name) != previousOtps.get(name) for name in currentOtps)
             
             if otpChanged:
-                clear_terminal()
-                print("PyAte - Python Authenticator Token Extractor")
-                print("------------------------")
+                clearTerminal()
+                banner()
                 print(f"{len(accounts)} accounts loaded.\n")
                 
                 for account in accounts:
                     print(f"[{account['name']}] OTP: {currentOtps[account['name']]}")
+
+                sys.stdout.write("\n")
                 
                 pyperclip.copy(accounts[0]['toptObj'].now())
                 previousOtps = currentOtps
             
-            sys.stdout.write(f"\nRemaining Time: {remainingSeconds}s{' ' * 10}\r")
+            sys.stdout.write(f"\rRemaining Time: {remainingSeconds}s{' ' * 10}")
             sys.stdout.flush()
             
             time.sleep(1)
