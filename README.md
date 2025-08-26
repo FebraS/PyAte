@@ -12,6 +12,9 @@ Ini memungkinkan Anda mengelola banyak akun secara bersamaan.
 * **Salin Otomatis**: Kode OTP untuk akun pertama secara otomatis disalin ke clipboard untuk memudahkan penempelan.
 * **Kompatibilitas Lintas Platform**: Bekerja dengan baik di Windows, macOS, dan Linux.
 
+## Fitur Tambahan (Berbasis Argumen)
+PyAte telah diperbarui untuk menyertakan fitur berbasis argumen, memberikan lebih banyak kontrol dan fleksibilitas.
+
 ## Cara Penggunaan
 Pastikan Anda sudah menginstal pustaka yang diperlukan.
 
@@ -26,6 +29,36 @@ otpauth://totp/Google%3Ayour-email?secret=YOUR_SECRET_KEY&issuer=Google
 <br>otpauth://totp/GitHub:your-username?secret=ANOTHER_SECRET_KEY&issuer=GitHub
 
 ## Jalankan Aplikasi:
+
+### Mode Normal
+Menampilkan semua OTP dan menyalin OTP pertama secara otomatis.
+
 ```bash
 python pyate.py
+```
+
+### Mode Interaktif
+Pilih akun mana yang OTP-nya akan disalin.
+
+```bash
+python pyate.py --interactive
+```
+
+### Mode Pencarian
+Tampilkan OTP hanya untuk akun yang cocok.
+
+```bash
+python pyate.py --search "google"
+```
+
+### Gunakan File Kustom
+
+```bash
+python pyate.py --read auth.txt
+```
+
+### Lihat Halaman Bantuan
+
+```bash
+python pyate.py --help
 ```
