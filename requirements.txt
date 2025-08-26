@@ -1,2 +1,2 @@
-pyperclip
-pyotp
+pyperclip==2.9.0
+pyotp==1.9.0
