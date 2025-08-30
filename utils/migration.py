@@ -89,7 +89,10 @@ def getOTPAuthPerLineFromOPTAuthMigration(migrationUri: str):
             lineLength = byteData[offset + 1]
             secretLength = byteData[offset + 3]
             secretBytes = byteData[offset + 4 : offset + 4 + secretLength]
-            secret = byteArrayToBase32(secretBytes)
+            
+            # Fix Unnecessary '=' in secret key for ykman commands bug
+            # Change characters from '=' to null
+            secret = byteArrayToBase32(secretBytes).replace("=", "")
 
             accountLength = byteData[offset + 4 + secretLength + 1]
             accountBytes = byteData[offset + 4 + secretLength + 2 : offset + 4 + secretLength + 2 + accountLength]
