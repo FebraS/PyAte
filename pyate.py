@@ -14,10 +14,13 @@ from urllib.parse import urlparse, parse_qs, unquote
 import pyotp
 import pyfiglet
 import argparse
+from pyzbar.pyzbar import decode
+from PIL import Image
+from utils import migration
 
 UPDATE_SECONDS = 5
 
-def parseOtpUrl(uri):
+def parseOtpUri(uri):
     if not uri.startswith("otpauth://"):
         return None, None
 
@@ -51,7 +54,7 @@ def loadAccounts(filename="accounts.txt"):
             for line in f:
                 uri = line.strip()
                 if uri:
-                    toptObj, name = parseOtpUrl(uri)
+                    toptObj, name = parseOtpUri(uri)
                     if toptObj:
                         accounts.append({'toptObj': toptObj, 'name': name})
                     else:
@@ -64,6 +67,34 @@ def loadAccounts(filename="accounts.txt"):
         return None
     
     return accounts
+
+def getOtpUriFromQrcode(imagePath):
+    try:
+        # Check if the file path exists and is not a directory
+        if not os.path.isfile(imagePath):
+            print(f"Error: File '{imagePath}' not found or is a directory.")
+            return None
+
+        img = Image.open(imagePath)
+        decodedObjects = decode(img)
+
+        for obj in decodedObjects:
+            uri = obj.data.decode('utf-8')
+            if uri.startswith("otpauth-migration://"):
+                print(f"Successfully read QR Code from: {imagePath}")
+                return uri
+
+        print(f"No OTP URI found in the QR Code file: {imagePath}")
+        return None
+
+    except FileNotFoundError:
+        print(f"Error: File '{imagePath}' not found.")
+        return None
+    except Exception as e:
+        print(f"An error occurred while processing the QR code file: {e}")
+        return None
+    
+
 
 def clearTerminal():
     if platform.system() == "Windows":
@@ -88,8 +119,8 @@ def setupArgParse():
                         default='accounts.txt', 
                         help='Specify the file to read account URIs from. (e.g., --read accounts.txt)')
     
-    # Adding argument --interactive or -i
-    parser.add_argument('-i', '--interactive',
+    # Adding argument --interactive or -t
+    parser.add_argument('-t', '--interactive',
                         action='store_true',
                         help='Enable interactive mode to select which OTP to copy.')
     
@@ -97,6 +128,15 @@ def setupArgParse():
     parser.add_argument('-s', '--search',
                         type=str,
                         help='Search for accounts by name.')
+    
+    # Adding argument --import or -i
+    parser.add_argument('-i', '--import-migration',
+                        type=str,
+                        help='Help import OTPs from a migration QR code. (e.g., --import-migration path/to/qrcode.png )')
+    
+    parser.add_argument('-o', '--output-file',
+                        type=str,
+                        help='Specify the output file to write the decoded URIs. Overrides --read for import operations.')
     
     return parser.parse_args()
 
@@ -106,6 +146,37 @@ def main():
     clearTerminal()
     banner()
 
+    accounts = []
+
+    # Determine output file for imports
+    outputFile = args.output_file if args.output_file else args.read
+
+    if args.import_migration:
+        if os.path.isfile(args.import_migration):
+            uri = getOtpUriFromQrcode(args.import_migration)
+            if uri:
+                
+                otpUris = migration.getOTPAuthPerLineFromOPTAuthMigration(uri)
+                if otpUris:
+                    try:
+                        with open(outputFile, 'a') as f:
+                            for otpUri in otpUris:
+                                f.write(otpUri + '\n')
+                        print(f"Migration URIs successfully added to '{args.read}'.")
+                    except Exception as e:
+                        print(f"Failed to write URIs to file: {e}")
+                else:
+                    print("No valid OTP URIs found in the migration data.")
+            else:
+                return
+        elif args.import_migration.startswith("otpauth-migration://"):
+            print("Migration URIs are not directly supported in this version. Please use a QR code.")
+            return
+        else:
+            print("Invalid --import-migration argument. Please provide a QR code image file path.")
+            return
+            
+    # Load accounts from the file after all imports are complete
     accounts = loadAccounts(args.read)
     
     if not accounts:
