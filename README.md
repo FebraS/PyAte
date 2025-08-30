@@ -53,6 +53,19 @@ Anda bisa mengombinasikan --import-migration dengan --output-file untuk menyimpa
 python pyate.py --import-migration path/to/qrcode.png --output-file new_accounts.txt
 ```
 
+### Generate YubiKey Manager (ykman) Commands
+
+Fitur ini mengubah URI migrasi yang diekstrak dari kode QR atau URI langsung menjadi perintah `ykman` yang siap dijalankan. 
+
+Ini sangat ideal untuk pengguna yang ingin mengimpor akun TOTP mereka dari Google Authenticator langsung ke perangkat YubiKey.
+
+```bash
+python pyate.py --generate-ykman path/to/qrcode.png
+```
+Perintah ini akan memindai kode QR, mengekstrak URI OTP, dan mencetak serangkaian perintah `ykman` ke terminal. 
+
+Anda dapat langsung menyalin dan menempelkan perintah tersebut untuk mengimpor akun Anda ke YubiKey.
+
 ### Mode Interaktif
 Pilih akun mana yang OTP-nya akan disalin.
 
@@ -61,20 +74,35 @@ python pyate.py --interactive
 ```
 
 ### Mode Pencarian
-Tampilkan OTP hanya untuk akun yang cocok.
+Argumen `--search` memungkinkan Anda untuk memfilter akun dan hanya menampilkan OTP untuk akun yang cocok dengan kata kunci yang Anda masukkan. Ini sangat berguna ketika Anda memiliki banyak akun dalam file Anda dan hanya ingin melihat satu atau beberapa akun tertentu.
 
 ```bash
 python pyate.py --search "google"
 ```
 
+**Contoh**: Jika file accounts.txt Anda berisi akun untuk Google dan GitHub, perintah python pyate.py --search "google" akan memfilter daftar dan hanya menampilkan OTP untuk akun Google. Perintah ini akan menampilkan output seperti ini:
+
+```
+1 accounts loaded from 'accounts.txt'.
+
+[Google: your-email] OTP: 123456
+
+Remaining Time: 25s
+```
+
 ### Gunakan File Kustom
+Secara default, PyAte akan membaca akun dari file accounts.txt. Namun, dengan argumen --read, Anda dapat menentukan file teks lain untuk memuat akun OTP. Ini memungkinkan Anda untuk mengelola beberapa set akun secara terpisah tanpa harus mengubah file utama.
+
+**Contoh**: Jika Anda memiliki file bernama auth.txt dan ingin PyAte memuat akun dari sana, gunakan perintah:
 
 ```bash
 python pyate.py --read auth.txt
 ```
 
 ### Lihat Halaman Bantuan
+Argumen --help menampilkan deskripsi singkat tentang program dan semua argumen yang tersedia, lengkap dengan penjelasannya. Ini adalah cara cepat untuk mendapatkan ringkasan semua fitur yang didukung oleh PyAte langsung di terminal Anda.
 
+**Contoh**
 ```bash
 python pyate.py --help
 ```
