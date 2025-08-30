@@ -94,7 +94,69 @@ def getOtpUriFromQrcode(imagePath):
         print(f"An error occurred while processing the QR code file: {e}")
         return None
     
+def generateYkmanCommands(migration_uri: str) -> list:
+    commands = []
+    try:
+        otpUris = migration.getOTPAuthPerLineFromOPTAuthMigration(migration_uri)
+    except Exception as e:
+        print(f"Error parsing migration URI: {e}")
+        return commands
 
+    for uri in otpUris:
+        try:
+            parsedUri = urlparse(uri)
+            queryParams = parse_qs(parsedUri.query)
+            
+            # Initialize the base command
+            ykargs = ["oath", "add"]
+
+            # Add type
+            otpType = parsedUri.netloc.lower()
+            if otpType == "totp":
+                ykargs.extend(["-o", "TOTP", "-p", "30"])
+            elif otpType == "hotp":
+                ykargs.extend(["-o", "HOTP"])
+            else:
+                continue # Skip unsupported types
+
+            # Add digits
+            digits = queryParams.get("digits", ["6"])[0]
+            ykargs.extend(["-d", digits])
+
+            # Add algorithm
+            algorithm = queryParams.get("algorithm", ["SHA1"])[0].upper()
+            ykargs.extend(["-a", algorithm])
+
+            # Add counter for HOTP
+            if otpType == "hotp":
+                counter = queryParams.get("counter", ["0"])[0]
+                ykargs.extend(["-c", counter])
+
+            # Add issuer
+            issuer = queryParams.get("issuer", [""])[0]
+            if len(issuer) > 0:
+                ykargs.extend(["-i", f'"{issuer}"'])
+            
+            # Add name (account) and secret
+            accountName = unquote(parsedUri.path.strip('/'))
+            secret = queryParams.get("secret", [""])[0]
+            
+            # Handle issuer in name if it's not provided separately
+            if not issuer and accountName.find(':') > 0:
+                parts = accountName.split(':')
+                issuer = parts[0]
+                accountName = parts[1]
+                ykargs.extend(["-i", f'"{issuer}"'])
+            
+            ykargs.append(f'"{accountName}"')
+            ykargs.append(secret)
+
+            commands.append("ykman " + " ".join(ykargs))
+            
+        except (IndexError, KeyError):
+            continue
+            
+    return commands
 
 def clearTerminal():
     if platform.system() == "Windows":
@@ -134,9 +196,16 @@ def setupArgParse():
                         type=str,
                         help='Help import OTPs from a migration QR code. (e.g., --import-migration path/to/qrcode.png )')
     
+    # Adding argument --import-migration
     parser.add_argument('-o', '--output-file',
                         type=str,
                         help='Specify the output file to write the decoded URIs. Overrides --read for import operations.')
+    
+    # Adding argument --generate-ykman or -g
+    parser.add_argument('-g', '--generate-ykman',
+                        type=str, # Changed type to str to accept QR code path
+                        metavar='QR_CODE_PATH',
+                        help='Generate and print YubiKey Manager (ykman) commands directly from a migration QR code or URI. (e.g., --generate-ykman path/to/qrcode.png)')
     
     return parser.parse_args()
 
@@ -175,6 +244,34 @@ def main():
         else:
             print("Invalid --import-migration argument. Please provide a QR code image file path.")
             return
+    
+    elif args.generate_ykman:
+        uriOrPath = args.generate_ykman
+        
+        # Check if the input is a file path or a URI string
+        if os.path.isfile(uriOrPath):
+            uri = getOtpUriFromQrcode(uriOrPath)
+            if not uri:
+                return
+        elif uriOrPath.startswith("otpauth-migration://"):
+            uri = uriOrPath
+        else:
+            print("Invalid --generate-ykman argument. Please provide a QR code image file path or a migration URI string.")
+            return
+        
+        if uri:
+            print("YubiKey Manager (ykman) commands for the loaded accounts:")
+            print("-" * 50)
+            ykmanCommands = generateYkmanCommands(uri)
+            if ykmanCommands:
+                for cmd in ykmanCommands:
+                    print(cmd)
+            else:
+                print("No valid OTP URIs found in the migration data.")
+            print("-" * 50)
+        
+        # Exit after generating ykman commands
+        return
             
     # Load accounts from the file after all imports are complete
     accounts = loadAccounts(args.read)
