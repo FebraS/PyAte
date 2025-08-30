@@ -1,7 +1,9 @@
+#PyAte/utils/migration.py
+
 import base64
 import urllib.parse
 
-# Rewritten by Febra S
+# Ported and adapted from Authenticator extension
 # Ref:  https://github.com/Authenticator-Extension/Authenticator/blob/dev/src/models/migration.ts
 
 def byteArrayToBase32(bytes_data: list) -> str:
@@ -16,6 +18,7 @@ def byteArrayToBase32(bytes_data: list) -> str:
         hasDataInLow = True
         currentByte = bytes_data[i]
 
+        # Process each byte based on its position
         if i % 5 == 0:
             high = 0xF8 & currentByte
             result += chars[high >> 3]
@@ -65,10 +68,10 @@ def getOTPAuthPerLineFromOPTAuthMigration(migrationUri: str):
         urlDecodedUri = urllib.parse.unquote(migrationUri)
         
         # Step 2: Split and get the Base64 data
-        base64_data = urlDecodedUri.split("data=")[1]
+        base64Data = urlDecodedUri.split("data=")[1]
         
         # Step 3: Base64 decode the clean data
-        byteData = base64.b64decode(base64_data)
+        byteData = base64.b64decode(base64Data)
 
     except (IndexError, base64.binascii.Error):
         return []
@@ -76,10 +79,12 @@ def getOTPAuthPerLineFromOPTAuthMigration(migrationUri: str):
     lines = []
     offset = 0
 
+    # Parse the byte data
     while offset < len(byteData):
         if byteData[offset] != 10:
             break
         
+        # Read lengths and values
         try:
             lineLength = byteData[offset + 1]
             secretLength = byteData[offset + 3]
@@ -97,15 +102,16 @@ def getOTPAuthPerLineFromOPTAuthMigration(migrationUri: str):
             algorithmIndex = byteData[offset + 4 + secretLength + 2 + accountLength + 2 + issuerLength + 1]
             algorithm = ["SHA1", "SHA1", "SHA256", "SHA512", "MD5"][algorithmIndex]
             
-            digigsIndex = byteData[offset + 4 + secretLength + 2 + accountLength + 2 + issuerLength + 3]
-            digits = [6, 6, 8][digigsIndex]
+            digitsIndex = byteData[offset + 4 + secretLength + 2 + accountLength + 2 + issuerLength + 3]
+            digits = [6, 6, 8][digitsIndex]
             
             typeIndex = byteData[offset + 4 + secretLength + 2 + accountLength + 2 + issuerLength + 5]
             typeName = ["totp", "hotp", "totp"][typeIndex]
 
         except IndexError:
             break
-
+        
+        # Construct the otpauth URI
         line = f"otpauth://{typeName}/{account}?secret={secret}&issuer={issuer}&algorithm={algorithm}&digits={digits}"
 
         if typeName == "hotp":
