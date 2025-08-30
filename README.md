@@ -26,8 +26,10 @@ pip install -r requirements.txt
 > Buat File Akun: Buat file bernama accounts.txt di direktori yang sama dengan program. Masukkan alamat otpauth:// untuk setiap akun di baris terpisah.
 
 ### Contoh isi accounts.txt
-otpauth://totp/Google%3Ayour-email?secret=YOUR_SECRET_KEY&issuer=Google
+
+```otpauth://totp/Google%3Ayour-email?secret=YOUR_SECRET_KEY&issuer=Google
 <br>otpauth://totp/GitHub:your-username?secret=ANOTHER_SECRET_KEY&issuer=GitHub
+```
 
 ## Jalankan Aplikasi:
 
