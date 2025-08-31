@@ -54,9 +54,9 @@ def loadAccounts(filename="accounts.txt"):
             for line in f:
                 uri = line.strip()
                 if uri:
-                    toptObj, name = parseOtpUri(uri)
-                    if toptObj:
-                        accounts.append({'toptObj': toptObj, 'name': name})
+                    totpObj, name = parseOtpUri(uri)
+                    if totpObj:
+                        accounts.append({'totpObj': totpObj, 'name': name})
                     else:
                         print(f"Warning: Skipping invalid line -> {uri}")
     except FileNotFoundError:
@@ -94,10 +94,10 @@ def getOtpUriFromQrcode(imagePath):
         print(f"An error occurred while processing the QR code file: {e}")
         return None
     
-def generateYkmanCommands(migration_uri: str) -> list:
+def generateYkmanCommands(migrationUri: str) -> list:
     commands = []
     try:
-        otpUris = migration.getOTPAuthPerLineFromOPTAuthMigration(migration_uri)
+        otpUris = migration.getOTPAuthPerLineFromOPTAuthMigration(migrationUri)
     except Exception as e:
         print(f"Error parsing migration URI: {e}")
         return commands
@@ -299,7 +299,7 @@ def main():
             # Interactive mode
             print("Interactive Mode Enabled. Choose an account to copy its OTP.\n")
             for i, account in enumerate(accounts):
-                currentOtps[account['name']] = account['toptObj'].now()
+                currentOtps[account['name']] = account['totpObj'].now()
                 print(f"[{i+1}] {account['name']} : {currentOtps[account['name']]}")
 
             while True:
@@ -309,7 +309,7 @@ def main():
                         print("\nExiting interactive mode.")
                         break
                     if 1 <= choice <= len(accounts):
-                        selectedOtp = accounts[choice-1]['toptObj'].now()
+                        selectedOtp = accounts[choice-1]['totpObj'].now()
                         pyperclip.copy(selectedOtp)
                         print(f"\nOTP for '{accounts[choice-1]['name']}' ({selectedOtp}) copied to clipboard!")
                     else:
@@ -322,7 +322,7 @@ def main():
             while True:
                 remainingSeconds = 30 - (int(time.time()) % 30)
                 
-                currentOtps = {acc['name']: acc['toptObj'].now() for acc in accounts}
+                currentOtps = {acc['name']: acc['totpObj'].now() for acc in accounts}
                 otpChanged = any(currentOtps.get(name) != previousOtps.get(name) for name in currentOtps)
                 
                 if otpChanged:
@@ -336,7 +336,7 @@ def main():
                     sys.stdout.write("\n")
                     
                     if accounts:
-                        pyperclip.copy(accounts[0]['toptObj'].now())
+                        pyperclip.copy(accounts[0]['totpObj'].now())
                     previousOtps = currentOtps
                 
                 sys.stdout.write(f"\rRemaining Time: {remainingSeconds}s{' ' * 10}")
