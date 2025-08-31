@@ -27,8 +27,7 @@ pip install -r requirements.txt
 
 ### Contoh isi accounts.txt
 
-```otpauth://totp/Google%3Ayour-email?secret=YOUR_SECRET_KEY&issuer=Google
-<br>otpauth://totp/GitHub:your-username?secret=ANOTHER_SECRET_KEY&issuer=GitHub
+```otpauth://totp/GitHub:your-username?secret=ANOTHER_SECRET_KEY&issuer=GitHub
 ```
 
 ## Jalankan Aplikasi:
