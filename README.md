@@ -12,6 +12,7 @@ Ini memungkinkan Anda mengelola banyak akun secara bersamaan.
 * **Salin Otomatis**: Kode OTP untuk akun pertama secara otomatis disalin ke clipboard untuk memudahkan penempelan.
 * **Kompatibilitas Lintas Platform**: Bekerja dengan baik di Windows, macOS, dan Linux.
 * **Impor Migrasi**: Otomatis mengimpor semua akun dari kode QR migrasi Google Authenticator, menyederhanakan proses penyiapan.
+* **Dukungan YubiKey**: Kemampuan untuk menghasilkan perintah ykman secara langsung dari URI migrasi, memungkinkan impor akun TOTP ke perangkat YubiKey dengan mudah.
 
 ## Fitur Tambahan (Berbasis Argumen)
 PyAte telah diperbarui untuk menyertakan fitur berbasis argumen, memberikan lebih banyak kontrol dan fleksibilitas.
