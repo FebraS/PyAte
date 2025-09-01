@@ -191,10 +191,10 @@ def setupArgParse():
                         type=str,
                         help='Search for accounts by name.')
     
-    # Adding argument --import or -i
+    # Adding argument --import-migration or -i
     parser.add_argument('-i', '--import-migration',
                         type=str,
-                        help='Help import OTPs from a migration QR code. (e.g., --import-migration path/to/qrcode.png )')
+                        help='Help import OTPs from a migration QR code or URI string. (e.g., --import-migration path/to/qrcode.png or --import-migration "otpauth-migration://...")')
     
     # Adding argument --import-migration
     parser.add_argument('-o', '--output-file',
@@ -221,29 +221,29 @@ def main():
     outputFile = args.output_file if args.output_file else args.read
 
     if args.import_migration:
-        if os.path.isfile(args.import_migration):
-            uri = getOtpUriFromQrcode(args.import_migration)
-            if uri:
-                
-                otpUris = migration.getOTPAuthPerLineFromOPTAuthMigration(uri)
-                if otpUris:
-                    try:
-                        with open(outputFile, 'a') as f:
-                            for otpUri in otpUris:
-                                f.write(otpUri + '\n')
-                        print(f"Migration URIs successfully added to '{args.read}'.")
-                    except Exception as e:
-                        print(f"Failed to write URIs to file: {e}")
-                else:
-                    print("No valid OTP URIs found in the migration data.")
-            else:
-                return
-        elif args.import_migration.startswith("otpauth-migration://"):
-            print("Migration URIs are not directly supported in this version. Please use a QR code.")
-            return
+        uriOrPath = args.import_migration
+        
+        # Check if the input is a file path or a URI string
+        if uriOrPath.startswith("otpauth-migration://"):
+            uri = uriOrPath
+        elif os.path.isfile(uriOrPath):
+            uri = getOtpUriFromQrcode(uriOrPath)
         else:
-            print("Invalid --import-migration argument. Please provide a QR code image file path.")
+            print("Invalid --import-migration argument. Please provide a migration URI string or a QR code image file path.")
             return
+        
+        if uri:
+            otpUris = migration.getOTPAuthPerLineFromOPTAuthMigration(uri)
+            if otpUris:
+                try:
+                    with open(outputFile, 'a') as f:
+                        for otpUri in otpUris:
+                            f.write(otpUri + '\n')
+                    print(f"Migration URIs successfully added to '{outputFile}'.")
+                except Exception as e:
+                    print(f"Failed to write URIs to file: {e}")
+            else:
+                print("No valid OTP URIs found in the migration data.")
     
     elif args.generate_ykman:
         uriOrPath = args.generate_ykman
