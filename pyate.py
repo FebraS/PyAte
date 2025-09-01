@@ -80,7 +80,9 @@ def getOtpUriFromQrcode(imagePath):
 
         for obj in decodedObjects:
             uri = obj.data.decode('utf-8')
-            if uri.startswith("otpauth-migration://"):
+            
+            # Updated to handle both migration and single OTP URIs
+            if uri.startswith("otpauth-migration://") or uri.startswith("otpauth://"):
                 print(f"Successfully read QR Code from: {imagePath}")
                 return uri
 
@@ -252,23 +254,34 @@ def main():
             uri = getOtpUriFromQrcode(uriOrPath)
             if uri:
                 # Assuming the QR code contains a migration URI
-                otpUris = migration.getOTPAuthPerLineFromOPTAuthMigration(uri)
-                if otpUris:
+                if uri.startswith("otpauth-migration://"):
+                    otpUris = migration.getOTPAuthPerLineFromOPTAuthMigration(uri)
+                    if otpUris:
+                        try:
+                            with open(outputFile, 'a') as f:
+                                for otpUri in otpUris:
+                                    f.write(otpUri + '\n')
+                            print(f"Migration URIs successfully added to '{outputFile}'.")
+                        except Exception as e:
+                            print(f"Failed to write URIs to file: {e}")
+                    else:
+                        print("No valid OTP URIs found in the QR code.")
+                
+                # Added logic to handle a single otpauth:// URI
+                elif uri.startswith("otpauth://"):
                     try:
                         with open(outputFile, 'a') as f:
-                            for otpUri in otpUris:
-                                f.write(otpUri + '\n')
-                        print(f"Migration URIs successfully added to '{outputFile}'.")
+                            f.write(uri + '\n')
+                        print(f"OTP URI from QR code successfully added to '{outputFile}'.")
                     except Exception as e:
-                        print(f"Failed to write URIs to file: {e}")
+                        print(f"Failed to write URI to file: {e}")
                 else:
-                    print("No valid OTP URIs found in the QR code.")
-        
+                    print("The QR code does not contain a valid OTP URI.")
         else:
             print("Invalid --import-migration argument. Please provide a migration or single OTP URI string or a QR code image file path.")
         
         return
-    
+        
     elif args.generate_ykman:
         uriOrPath = args.generate_ykman
         
