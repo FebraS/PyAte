@@ -36,6 +36,8 @@ def setupArgParse():
     # Adding argument --import or -i
     parser.add_argument('-i', '--import-migration',
                         type=str,
+                        # Fix issue inefficient import of multiple arguments
+                        nargs='+',
                         help='''Import accounts from a QR code image file (e.g., path/to/qrcode.png), 
 a migration URI string (e.g., "otpauth-migration://..."), 
 or a single OTP URI string (e.g., "otpauth://...").''')
