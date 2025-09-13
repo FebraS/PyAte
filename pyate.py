@@ -5,211 +5,16 @@
     Copyright (C) 2025  Febra S
 """
 
-import os
-import platform
-import time
 import sys
+import time
+import os
 import pyperclip
-from urllib.parse import urlparse, parse_qs, unquote
-import pyotp
-import pyfiglet
-import argparse
-from pyzbar.pyzbar import decode
-from PIL import Image
-from utils import migration
-
-UPDATE_SECONDS = 5
-
-def parseOtpUri(uri):
-    if not uri.startswith("otpauth://"):
-        return None, None
-
-    parsedUrl = urlparse(uri)
-    params = parse_qs(parsedUrl.query)
-    
-    secret = params.get('secret', [None])[0]
-    if not secret:
-        return None, None
-
-    issuer = params.get('issuer', [None])[0]
-    accountPath = unquote(parsedUrl.path.strip('/'))
-
-    if ':' in accountPath:
-        pathParts = accountPath.split(':', 1)
-        if not issuer:
-            issuer = pathParts[0]
-        account = pathParts[1]
-    else:
-        account = accountPath
-    
-    if not issuer:
-        issuer = "Unknown Issuer"
-
-    return pyotp.TOTP(secret), f"{issuer}: {account}"
-
-def loadAccounts(filename="accounts.txt"):
-    accounts = []
-    try:
-        with open(filename, 'r') as f:
-            for line in f:
-                uri = line.strip()
-                if uri:
-                    totpObj, name = parseOtpUri(uri)
-                    if totpObj:
-                        accounts.append({'totpObj': totpObj, 'name': name})
-                    else:
-                        print(f"Warning: Skipping invalid line -> {uri}")
-    except FileNotFoundError:
-        print(f"Error: File '{filename}' not found.")
-        return None
-    except Exception as e:
-        print(f"An error occurred while reading the file: {e}")
-        return None
-    
-    return accounts
-
-def getOtpUriFromQrcode(imagePath):
-    try:
-        # Check if the file path exists and is not a directory
-        if not os.path.isfile(imagePath):
-            print(f"Error: File '{imagePath}' not found or is a directory.")
-            return None
-
-        img = Image.open(imagePath)
-        decodedObjects = decode(img)
-
-        for obj in decodedObjects:
-            uri = obj.data.decode('utf-8')
-            
-            # Updated to handle both migration and single OTP URIs
-            if uri.startswith("otpauth-migration://") or uri.startswith("otpauth://"):
-                print(f"Successfully read QR Code from: {imagePath}")
-                return uri
-
-        print(f"No OTP URI found in the QR Code file: {imagePath}")
-        return None
-
-    except FileNotFoundError:
-        print(f"Error: File '{imagePath}' not found.")
-        return None
-    except Exception as e:
-        print(f"An error occurred while processing the QR code file: {e}")
-        return None
-    
-def generateYkmanCommands(migrationUri: str) -> list:
-    commands = []
-    try:
-        otpUris = migration.getOTPAuthPerLineFromOPTAuthMigration(migrationUri)
-    except Exception as e:
-        print(f"Error parsing migration URI: {e}")
-        return commands
-
-    for uri in otpUris:
-        try:
-            parsedUri = urlparse(uri)
-            queryParams = parse_qs(parsedUri.query)
-            
-            # Initialize the base command
-            ykargs = ["oath", "add"]
-
-            # Add type
-            otpType = parsedUri.netloc.lower()
-            if otpType == "totp":
-                ykargs.extend(["-o", "TOTP", "-p", "30"])
-            elif otpType == "hotp":
-                ykargs.extend(["-o", "HOTP"])
-            else:
-                continue # Skip unsupported types
-
-            # Add digits
-            digits = queryParams.get("digits", ["6"])[0]
-            ykargs.extend(["-d", digits])
-
-            # Add algorithm
-            algorithm = queryParams.get("algorithm", ["SHA1"])[0].upper()
-            ykargs.extend(["-a", algorithm])
-
-            # Add counter for HOTP
-            if otpType == "hotp":
-                counter = queryParams.get("counter", ["0"])[0]
-                ykargs.extend(["-c", counter])
-
-            # Add issuer
-            issuer = queryParams.get("issuer", [""])[0]
-            if len(issuer) > 0:
-                ykargs.extend(["-i", f'"{issuer}"'])
-            
-            # Add name (account) and secret
-            accountName = unquote(parsedUri.path.strip('/'))
-            secret = queryParams.get("secret", [""])[0]
-            
-            # Handle issuer in name if it's not provided separately
-            if not issuer and accountName.find(':') > 0:
-                parts = accountName.split(':')
-                issuer = parts[0]
-                accountName = parts[1]
-                ykargs.extend(["-i", f'"{issuer}"'])
-            
-            ykargs.append(f'"{accountName}"')
-            ykargs.append(secret)
-
-            commands.append("ykman " + " ".join(ykargs))
-            
-        except (IndexError, KeyError):
-            continue
-            
-    return commands
-
-def clearTerminal():
-    if platform.system() == "Windows":
-        os.system('cls')
-    else:
-        os.system('clear')
-
-def banner():
-    print(f"{pyfiglet.figlet_format('PyAte', font='slant')}")
-    print("Python Authenticator Token Extractor")
-    print("https://github.com/FebraS/PyAte")
-    print("\n")
-
-def setupArgParse():
-    # Manage command line arguments
-    # Create the parser
-    parser = argparse.ArgumentParser(description=banner())
-
-    # Adding argument --read or -r
-    parser.add_argument('-r', '--read', 
-                        type=str, 
-                        default='accounts.txt', 
-                        help='Specify the file to read account URIs from. (e.g., --read accounts.txt)')
-    
-    # Adding argument --interactive or -t
-    parser.add_argument('-t', '--interactive',
-                        action='store_true',
-                        help='Enable interactive mode to select which OTP to copy.')
-    
-    # Adding argument --search or -s
-    parser.add_argument('-s', '--search',
-                        type=str,
-                        help='Search for accounts by name.')
-    
-    # Adding argument --import or -i
-    parser.add_argument('-i', '--import-migration',
-                        type=str,
-                        help='Import accounts from a QR code image file (e.g., path/to/qrcode.png), a migration URI string (e.g., "otpauth-migration://..."), or a single OTP URI string (e.g., "otpauth://...").')
-    
-    # Adding argument --import-migration
-    parser.add_argument('-o', '--output-file',
-                        type=str,
-                        help='Specify the output file to write the decoded URIs. Overrides --read for import operations.')
-    
-    # Adding argument --generate-ykman or -g
-    parser.add_argument('-g', '--generate-ykman',
-                        type=str, # Changed type to str to accept QR code path
-                        metavar='QR_CODE_PATH',
-                        help='Generate and print YubiKey Manager (ykman) commands directly from a migration QR code or URI. (e.g., --generate-ykman path/to/qrcode.png)')
-    
-    return parser.parse_args()
+from cli.parser import setupArgParse
+from utils.terminal import clearTerminal, banner
+from utils.file_handler import loadAccounts
+from utils.qr_decoder import getOtpUriFromQrcode
+from core.ykman_exporter import generateYkmanCommands
+from utils.migration import getOTPAuthPerLineFromOPTAuthMigration
 
 def main():
     args = setupArgParse()
@@ -228,7 +33,7 @@ def main():
         # New logic to handle both otpauth-migration:// and otpauth://
         if uriOrPath.startswith("otpauth-migration://"):
             uri = uriOrPath
-            otpUris = migration.getOTPAuthPerLineFromOPTAuthMigration(uri)
+            otpUris = getOTPAuthPerLineFromOPTAuthMigration(uri)
             if otpUris:
                 try:
                     with open(outputFile, 'a') as f:
@@ -255,7 +60,7 @@ def main():
             if uri:
                 # Assuming the QR code contains a migration URI
                 if uri.startswith("otpauth-migration://"):
-                    otpUris = migration.getOTPAuthPerLineFromOPTAuthMigration(uri)
+                    otpUris = getOTPAuthPerLineFromOPTAuthMigration(uri)
                     if otpUris:
                         try:
                             with open(outputFile, 'a') as f:
