@@ -31,63 +31,65 @@ def main():
     outputFile = args.output_file if args.output_file else args.read
 
     if args.import_migration:
-        uriOrPath = args.import_migration
-        
-        # New logic to handle both otpauth-migration:// and otpauth://
-        if uriOrPath.startswith("otpauth-migration://"):
-            uri = uriOrPath
-            otpUris = getOTPAuthPerLineFromOPTAuthMigration(uri)
-            if otpUris:
-                try:
-                    with open(outputFile, 'a') as f:
-                        for otpUri in otpUris:
-                            f.write(otpUri + '\n')
-                    print(f"Migration URIs successfully added to '{Fore.LIGHTMAGENTA_EX}{outputFile}{Style.RESET_ALL}'.")
-                except Exception as e:
-                    print(f"{Fore.RED}Failed to write URIs to file: {e}{Style.RESET_ALL }")
-            else:
-                print(f"{Fore.RED}No valid OTP URIs found in the migration data.{Style.RESET_ALL}")
-                
-        elif uriOrPath.startswith("otpauth://"):
-            # If it's a single otpauth:// URI, add it directly.
-            try:
-                with open(outputFile, 'a') as f:
-                    f.write(uriOrPath + '\n')
-                print(f"OTP URI successfully added to '{Fore.LIGHTMAGENTA_EX}{outputFile}{Style.RESET_ALL}'.")
-            except Exception as e:
-                print(f"{Fore.RED}Failed to write URI to file: {e}{Style.RESET_ALL}")
-        
-        elif os.path.isfile(uriOrPath):
-            # Existing logic to handle a QR code image path
-            uri = getOtpUriFromQrcode(uriOrPath)
-            if uri:
-                # Assuming the QR code contains a migration URI
-                if uri.startswith("otpauth-migration://"):
-                    otpUris = getOTPAuthPerLineFromOPTAuthMigration(uri)
-                    if otpUris:
-                        try:
-                            with open(outputFile, 'a') as f:
-                                for otpUri in otpUris:
-                                    f.write(otpUri + '\n')
-                            print(f"Migration URIs successfully added to '{Fore.LIGHTMAGENTA_EX}{outputFile}{Style.RESET_ALL}'.")
-                        except Exception as e:
-                            print(f"{Fore.RED}Failed to write URIs to file: {e}{Style.RESET_ALL}")
-                    else:
-                        print(f"{Fore.RED}No valid OTP URIs found in the QR code.{Style.RESET_ALL}")
-                
-                # Added logic to handle a single otpauth:// URI
-                elif uri.startswith("otpauth://"):
+        # Loop through each URI or file path provided
+        for uriOrPath in args.import_migration:
+            
+            # New logic to handle both otpauth-migration:// and otpauth://
+            if uriOrPath.startswith("otpauth-migration://"):
+                uri = uriOrPath
+                otpUris = getOTPAuthPerLineFromOPTAuthMigration(uri)
+                if otpUris:
                     try:
                         with open(outputFile, 'a') as f:
-                            f.write(uri + '\n')
-                        print(f"OTP URI from QR code successfully added to '{Fore.LIGHTMAGENTA_EX}{outputFile}{Style.RESET_ALL}'.")
+                            for otpUri in otpUris:
+                                f.write(otpUri + '\n')
+                        print(f"Migration URIs from '{Fore.GREEN}URI{Style.RESET_ALL}' successfully added to '{Fore.LIGHTMAGENTA_EX}{outputFile}{Style.RESET_ALL}'.")
                     except Exception as e:
-                        print(f"{Fore.RED}Failed to write URI to file: {e}{Style.RESET_ALL}")
+                        print(f"{Fore.RED}Failed to write URIs to file: {e}{Style.RESET_ALL }")
                 else:
-                    print(f"{Fore.RED}The QR code does not contain a valid OTP URI.{Style.RESET_ALL}")
-        else:
-            print("Invalid --import-migration argument. Please provide a migration or single OTP URI string or a QR code image file path.")
+                    print(f"{Fore.RED}No valid OTP URIs found in the migration data from URI.{Style.RESET_ALL}")
+                    
+            elif uriOrPath.startswith("otpauth://"):
+                # If it's a single otpauth:// URI, add it directly.
+                try:
+                    with open(outputFile, 'a') as f:
+                        f.write(uriOrPath + '\n')
+                    print(f"OTP URI successfully added from '{Fore.GREEN}URI{Style.RESET_ALL}' to '{Fore.LIGHTMAGENTA_EX}{outputFile}{Style.RESET_ALL}'.")
+                except Exception as e:
+                    print(f"{Fore.RED}Failed to write URI to file: {e}{Style.RESET_ALL}")
+            
+            elif os.path.isfile(uriOrPath):
+                # Existing logic to handle a QR code image path
+                uri = getOtpUriFromQrcode(uriOrPath)
+                if uri:
+                    # Assuming the QR code contains a migration URI
+                    if uri.startswith("otpauth-migration://"):
+                        otpUris = getOTPAuthPerLineFromOPTAuthMigration(uri)
+                        if otpUris:
+                            try:
+                                with open(outputFile, 'a') as f:
+                                    for otpUri in otpUris:
+                                        f.write(otpUri + '\n')
+                                print(f"Migration URIs from '{Fore.CYAN}{uriOrPath}{Style.RESET_ALL}' successfully added to '{Fore.LIGHTMAGENTA_EX}{outputFile}{Style.RESET_ALL}'.")
+                            except Exception as e:
+                                print(f"{Fore.RED}Failed to write URIs to file: {e}{Style.RESET_ALL}")
+                        else:
+                            print(f"{Fore.RED}No valid OTP URIs found in the QR code.{Style.RESET_ALL}")
+                    
+                    # Added logic to handle a single otpauth:// URI
+                    elif uri.startswith("otpauth://"):
+                        try:
+                            with open(outputFile, 'a') as f:
+                                f.write(uri + '\n')
+                            print(f"OTP URI from QR code '{Fore.CYAN}{uriOrPath}{Style.RESET_ALL}' successfully added to '{Fore.LIGHTMAGENTA_EX}{outputFile}{Style.RESET_ALL}'.")
+                        except Exception as e:
+                            print(f"{Fore.RED}Failed to write URI to file: {e}{Style.RESET_ALL}")
+                    else:
+                        print(f"{Fore.RED}The QR code does not contain a valid OTP URI.{Style.RESET_ALL}")
+            else:
+                print(f"{Fore.RED}Invalid --import-migration argument: '{uriOrPath}'. Please provide a valid URI or a file path.{Style.RESET_ALL}")
         
+        # We process all imports and then exit
         return
         
     elif args.generate_ykman:
@@ -145,16 +147,16 @@ def main():
             print("Interactive Mode Enabled. Choose an account to copy its OTP.\n")
             
             # Find the maximum length of account names for alignment
-            max_name_len = 0
+            maxNameLen = 0
             if accounts:
-                max_name_len = max(len(acc['name']) for acc in accounts)
+                maxNameLen = max(len(acc['name']) for acc in accounts)
             
             # Print accounts with aligned OTPs
             for i, account in enumerate(accounts):
                 currentOtps[account['name']] = account['totpObj'].now()
                 # Use ljust() to pad the account name for perfect alignment
-                padded_name = f"[{i+1}] {account['name']}".ljust(max_name_len + 5)
-                print(f"{padded_name}: {currentOtps[account['name']]}")
+                paddedName = f"[{i+1}] {account['name']}".ljust(maxNameLen + 5)
+                print(f"{paddedName}: {currentOtps[account['name']]}")
 
             while True:
                 try:
@@ -175,9 +177,9 @@ def main():
             # Normal mode
             
             # Find the maximum length of account names for alignment
-            max_name_len = 0
+            maxNameLen = 0
             if accounts:
-                max_name_len = max(len(acc['name']) for acc in accounts)
+                maxNameLen = max(len(acc['name']) for acc in accounts)
                 
             while True:
                 remainingSeconds = 30 - (int(time.time()) % 30)
@@ -192,8 +194,8 @@ def main():
                     
                     for account in accounts:
                         # Use ljust() to pad the name for perfect alignment
-                        padded_name = f"[{account['name']}]".ljust(max_name_len + 3)
-                        print(f"{padded_name} OTP: {Fore.LIGHTGREEN_EX}{currentOtps[account['name']]}{Style.RESET_ALL}")
+                        paddedName = f"[{account['name']}]".ljust(maxNameLen + 3)
+                        print(f"{paddedName} OTP: {Fore.LIGHTGREEN_EX}{currentOtps[account['name']]}{Style.RESET_ALL}")
 
                     sys.stdout.write("\n")
                     
