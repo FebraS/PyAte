@@ -9,6 +9,7 @@ import sys
 import time
 import os
 import pyperclip
+from colorama import init, Fore, Style
 from cli.parser import setupArgParse
 from utils.terminal import clearTerminal, banner
 from utils.file_handler import loadAccounts
@@ -17,6 +18,8 @@ from core.ykman_exporter import generateYkmanCommands
 from utils.migration import getOTPAuthPerLineFromOPTAuthMigration
 
 def main():
+    # Initialize colorama
+    init()
     args = setupArgParse()
     
     clearTerminal()
@@ -39,20 +42,20 @@ def main():
                     with open(outputFile, 'a') as f:
                         for otpUri in otpUris:
                             f.write(otpUri + '\n')
-                    print(f"Migration URIs successfully added to '{outputFile}'.")
+                    print(f"Migration URIs successfully added to '{Fore.LIGHTMAGENTA_EX}{outputFile}{Style.RESET_ALL}'.")
                 except Exception as e:
-                    print(f"Failed to write URIs to file: {e}")
+                    print(f"{Fore.RED}Failed to write URIs to file: {e}{Style.RESET_ALL }")
             else:
-                print("No valid OTP URIs found in the migration data.")
+                print(f"{Fore.RED}No valid OTP URIs found in the migration data.{Style.RESET_ALL}")
                 
         elif uriOrPath.startswith("otpauth://"):
             # If it's a single otpauth:// URI, add it directly.
             try:
                 with open(outputFile, 'a') as f:
                     f.write(uriOrPath + '\n')
-                print(f"OTP URI successfully added to '{outputFile}'.")
+                print(f"OTP URI successfully added to '{Fore.LIGHTMAGENTA_EX}{outputFile}{Style.RESET_ALL}'.")
             except Exception as e:
-                print(f"Failed to write URI to file: {e}")
+                print(f"{Fore.RED}Failed to write URI to file: {e}{Style.RESET_ALL}")
         
         elif os.path.isfile(uriOrPath):
             # Existing logic to handle a QR code image path
@@ -66,22 +69,22 @@ def main():
                             with open(outputFile, 'a') as f:
                                 for otpUri in otpUris:
                                     f.write(otpUri + '\n')
-                            print(f"Migration URIs successfully added to '{outputFile}'.")
+                            print(f"Migration URIs successfully added to '{Fore.LIGHTMAGENTA_EX}{outputFile}{Style.RESET_ALL}'.")
                         except Exception as e:
-                            print(f"Failed to write URIs to file: {e}")
+                            print(f"{Fore.RED}Failed to write URIs to file: {e}{Style.RESET_ALL}")
                     else:
-                        print("No valid OTP URIs found in the QR code.")
+                        print(f"{Fore.RED}No valid OTP URIs found in the QR code.{Style.RESET_ALL}")
                 
                 # Added logic to handle a single otpauth:// URI
                 elif uri.startswith("otpauth://"):
                     try:
                         with open(outputFile, 'a') as f:
                             f.write(uri + '\n')
-                        print(f"OTP URI from QR code successfully added to '{outputFile}'.")
+                        print(f"OTP URI from QR code successfully added to '{Fore.LIGHTMAGENTA_EX}{outputFile}{Style.RESET_ALL}'.")
                     except Exception as e:
-                        print(f"Failed to write URI to file: {e}")
+                        print(f"{Fore.RED}Failed to write URI to file: {e}{Style.RESET_ALL}")
                 else:
-                    print("The QR code does not contain a valid OTP URI.")
+                    print(f"{Fore.RED}The QR code does not contain a valid OTP URI.{Style.RESET_ALL}")
         else:
             print("Invalid --import-migration argument. Please provide a migration or single OTP URI string or a QR code image file path.")
         
@@ -114,7 +117,7 @@ def main():
         
         # Exit after generating ykman commands
         return
-            
+        
     # Load accounts from the file after all imports are complete
     accounts = loadAccounts(args.read)
     
@@ -131,7 +134,7 @@ def main():
             print(f"No accounts found matching '{args.search}'.")
             return
 
-    print(f"{len(accounts)} accounts loaded from '{args.read}'.\n")
+    print(f"{len(accounts)} accounts loaded from '{Fore.LIGHTMAGENTA_EX}{args.read}{Style.RESET_ALL}'.\n")
 
     currentOtps = {}
     previousOtps = {}
@@ -140,9 +143,18 @@ def main():
         if args.interactive:
             # Interactive mode
             print("Interactive Mode Enabled. Choose an account to copy its OTP.\n")
+            
+            # Find the maximum length of account names for alignment
+            max_name_len = 0
+            if accounts:
+                max_name_len = max(len(acc['name']) for acc in accounts)
+            
+            # Print accounts with aligned OTPs
             for i, account in enumerate(accounts):
                 currentOtps[account['name']] = account['totpObj'].now()
-                print(f"[{i+1}] {account['name']} : {currentOtps[account['name']]}")
+                # Use ljust() to pad the account name for perfect alignment
+                padded_name = f"[{i+1}] {account['name']}".ljust(max_name_len + 5)
+                print(f"{padded_name}: {currentOtps[account['name']]}")
 
             while True:
                 try:
@@ -161,6 +173,12 @@ def main():
         
         else:
             # Normal mode
+            
+            # Find the maximum length of account names for alignment
+            max_name_len = 0
+            if accounts:
+                max_name_len = max(len(acc['name']) for acc in accounts)
+                
             while True:
                 remainingSeconds = 30 - (int(time.time()) % 30)
                 
@@ -170,10 +188,12 @@ def main():
                 if otpChanged:
                     clearTerminal()
                     banner()
-                    print(f"{len(accounts)} accounts loaded from '{args.read}'.\n")
+                    print(f"{len(accounts)} accounts loaded from '{Fore.LIGHTMAGENTA_EX}{args.read}{Style.RESET_ALL}'.\n")
                     
                     for account in accounts:
-                        print(f"[{account['name']}] OTP: {currentOtps[account['name']]}")
+                        # Use ljust() to pad the name for perfect alignment
+                        padded_name = f"[{account['name']}]".ljust(max_name_len + 3)
+                        print(f"{padded_name} OTP: {Fore.LIGHTGREEN_EX}{currentOtps[account['name']]}{Style.RESET_ALL}")
 
                     sys.stdout.write("\n")
                     
@@ -187,9 +207,9 @@ def main():
                 time.sleep(1)
             
     except KeyboardInterrupt:
-        print("\n\nProgram stopped.")
+        print(f"\n\n{Fore.RED}Program stopped.{Style.RESET_ALL}")
     except Exception as e:
-        print(f"\n\nAn error occurred: {e}")
+        print(f"\n\n{Fore.RED}An error occurred: {e}{Style.RESET_ALL}")
 
 if __name__ == "__main__":
     main()
