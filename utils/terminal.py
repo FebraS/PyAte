@@ -2,7 +2,6 @@ import os
 import platform
 import pyfiglet
 from colorama import init, Fore, Style
-import random
 
 def clearTerminal():
     if platform.system() == "Windows":
