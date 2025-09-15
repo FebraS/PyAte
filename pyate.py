@@ -13,7 +13,7 @@ from colorama import init, Fore, Style
 from cli.parser import setupArgParse
 from utils.terminal import clearTerminal, banner
 from utils.file_handler import loadAccounts
-from utils.qr_decoder import getOtpUriFromQrcode
+from utils.qr_utils import getOtpUriFromQrcode, generateQrcodeFromUri
 from core.ykman_exporter import generateYkmanCommands
 from utils.migration import getOTPAuthPerLineFromOPTAuthMigration
 
@@ -119,7 +119,53 @@ def main():
         
         # Exit after generating ykman commands
         return
+    
+    if args.export:
         
+        inputFileExport = args.export
+        print(f"Exporting accounts from '{Fore.LIGHTMAGENTA_EX}{inputFileExport}{Style.RESET_ALL}' to QR codes.")
+
+        outputDir = "export"  # Directory to save QR codes
+        os.makedirs(outputDir, exist_ok=True) # Create directory if it doesn't exist
+
+        exported_count = 0
+        try:
+            with open(inputFileExport, 'r') as f: # Gunakan inputFileExport di sini
+                lines = f.readlines()
+
+            for line in lines:
+                line = line.strip()
+                if line.startswith("otpauth://"):
+                    try:
+                        import urllib.parse
+                        parsedUri = urllib.parse.urlparse(line)
+                        queryParams = urllib.parse.parse_qs(parsedUri.query)
+                        label = parsedUri.path.strip('/')
+                        issuer = queryParams.get('issuer', [label])[0]
+
+                        safeIssuer = "".join(c if c.isalnum() else "_" for c in issuer)
+                        safeLabel = "".join(c if c.isalnum() else "_" for c in label)
+
+                        fileNamePrefix = f"{safeIssuer}_{safeLabel}"
+                        outputFileName = os.path.join(outputDir, f"qrcode_{fileNamePrefix}.png")
+
+                        if generateQrcodeFromUri(line, outputFileName):
+                            exported_count += 1
+                    except Exception as e:
+                        print(f"{Fore.RED}Warning: Could not parse URI '{line}'. Skipping. Error: {e}{Style.RESET_ALL}")
+
+            if exported_count > 0:
+                print(f"\n{Fore.GREEN}Successfully exported {exported_count} QR codes to the '{Fore.LIGHTMAGENTA_EX}{outputDir}' directory.{Style.RESET_ALL}")
+            else:
+                print(f"{Fore.RED}No valid 'otpauth://' URIs found to export.{Style.RESET_ALL}")
+
+        except FileNotFoundError:
+            print(f"{Fore.RED}Error: File '{inputFileExport}' not found.{Style.RESET_ALL}")
+        except Exception as e:
+            print(f"{Fore.RED}An error occurred during export: {e}{Style.RESET_ALL}")
+
+        return
+
     # Load accounts from the file after all imports are complete
     accounts = loadAccounts(args.read)
     
@@ -207,7 +253,7 @@ def main():
                 sys.stdout.flush()
                 
                 time.sleep(1)
-            
+    
     except KeyboardInterrupt:
         print(f"\n\n{Fore.RED}Program stopped.{Style.RESET_ALL}")
     except Exception as e:
