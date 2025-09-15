@@ -59,7 +59,6 @@ from a migration QR code or URI.''')
                         nargs='?',
                         type=str,
                         const='accounts.txt',
-                        default='accounts.txt',
                         help='Specify the file to read account URIs from. Default is accounts.txt.')
 
     return parser.parse_args()
