@@ -56,7 +56,9 @@ from a migration QR code or URI.''')
     
     # Adding agrument --export or -e
     parser.add_argument('-e', '--export',
+                        nargs='?',
                         type=str,
+                        const='accounts.txt',
                         default='accounts.txt',
                         help='Specify the file to read account URIs from. Default is accounts.txt.')
 
