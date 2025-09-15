@@ -155,7 +155,7 @@ def main():
                         print(f"{Fore.RED}Warning: Could not parse URI '{line}'. Skipping. Error: {e}{Style.RESET_ALL}")
 
             if exported_count > 0:
-                print(f"\n{Fore.GREEN}Successfully exported {exported_count} QR codes to the {Fore.LIGHTMAGENTA_EX}'{outputDir}'{Fore.LIGHTGREEN_EX}directory.{Style.RESET_ALL}")
+                print(f"\n{Fore.GREEN}Successfully exported {exported_count} QR codes to the {Fore.LIGHTMAGENTA_EX}'{outputDir}'{Fore.GREEN} directory.{Style.RESET_ALL}")
             else:
                 print(f"{Fore.RED}No valid 'otpauth://' URIs found to export.{Style.RESET_ALL}")
 
