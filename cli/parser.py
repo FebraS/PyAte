@@ -53,5 +53,11 @@ or a single OTP URI string (e.g., "otpauth://...").''')
                         metavar='QR_CODE_PATH',
                         help='''Generate and print YubiKey Manager (ykman) commands directly 
 from a migration QR code or URI.''')
+    
+    # Adding agrument --export or -e
+    parser.add_argument('-e', '--export',
+                        type=str,
+                        default='accounts.txt',
+                        help='Specify the file to read account URIs from. Default is accounts.txt.')
 
     return parser.parse_args()
